@@ -14,20 +14,26 @@ from hotspot.serializers import HotspotSerializerStrategy
 class Builder:
     __metaclass__ = ABCMeta
 
+    def __init__(self):
+        # To tmp Save Fetched data
+        self.tmp = []
+
     code = None
 
     @abstractmethod
     def get_data(self):
         pass
 
-    @staticmethod
-    def generate_single_data(title, uri, hotspot_source=None, **kwargs):
-        return {
+    def generate_single_data(self, title, uri, hotspot_source=None, **kwargs):
+        # Update this function to reduce duplication code
+        data = {
             'title': title,
             'uri': uri,
             'hotspot_source': hotspot_source,
             'extra': json.dumps(kwargs)
         }
+        self.tmp.append(data)
+        return data
 
 
 class Director:
@@ -263,5 +269,81 @@ class ThePaperBuilder(Builder):
         return tmp
 
 
+class WYNewBuilder(Builder):
+    code = WY_NEW_CODE
+    uri = 'http://news.163.com/special/0001386F/rank_whole.html'
+
+    def get_data(self):
+        source = HotspotSource.objects.get(code=self.code)
+        r = preprocessor_fetch_data(self.uri)
+        tmp = []
+        for item in r.find('.tabContents', first=True).find('tr')[1:]:
+            a = item.find('a', first=True)
+            if a is None: continue
+            data = self.generate_single_data(
+                a.text,
+                a.attrs['href'],
+                hotspot_source=source.id,
+                count=item.find('.cBlue', first=True).text
+            )
+            tmp.append(data)
+        return tmp
+
+
+class WeiXinBuilder(Builder):
+    code = WEIXIN_CODE
+    uri = 'https://weixin.sogou.com/?pid=sogou-wsse-721e049e9903c3a7&kw='
+
+    def get_data(self):
+        source = HotspotSource.objects.get(code=self.code)
+        r = preprocessor_fetch_data(self.uri)
+        tmp = []
+        for item in r.find('.news-list li'):
+            if item.find('h3 a', first=True).text == '': continue
+            data = self.generate_single_data(
+                item.find('h3 a', first=True).text,
+                item.find('h3 a', first=True).attrs['href'],
+                hotspot_source=source.id,
+                count=''
+            )
+            tmp.append(data)
+        return tmp
+
+
+class ChiphellBuilder(Builder):
+    code = CHIPHELL_CODE
+    uri = 'https://www.chiphell.com/'
+
+    def get_data(self):
+        source = HotspotSource.objects.get(code=self.code)
+        r = preprocessor_fetch_data(self.uri)
+        for item in r.find('#frameZ3L5I7 li'):
+            self.generate_single_data(
+                item.text,
+                f"https://www.chiphell.com/{item.find('a', first=True).attrs['href']}",
+                hotspot_source=source.id,
+                count=''
+            )
+        return self.tmp
+
+
+class ItHomeBuilder(Builder):
+    code = IT_HOME_CODE
+    uri = 'https://www.ithome.com/'
+
+    def get_data(self):
+        source = HotspotSource.objects.get(code=self.code)
+        r = preprocessor_fetch_data(self.uri)
+        for item in r.find('.hot-list .bx ul li'):
+            a = item.find('a', first=True)
+            self.generate_single_data(
+                a.attrs['title'],
+                a.attrs['href'],
+                hotspot_source=source.id,
+                count=''
+            )
+        return self.tmp
+
+
 def test():
-    Director(ThePaperBuilder()).build()
+    Director(ItHomeBuilder()).build()

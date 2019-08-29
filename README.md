@@ -68,3 +68,7 @@ DATABASES = {
     "source_uri": "https://s.weibo.com/top/summary"
 }
 ```
+
+# 支持的网址
+
+微博热搜, 知乎, 百度热搜, 虎扑步行街, 百度贴吧, 知乎日报, 澎湃新闻, 网易新闻, 微信公众号文章, Chiphell, IT之家
