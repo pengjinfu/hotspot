@@ -4,7 +4,7 @@ from rest_framework import filters
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
-from hotspot.filters import HotspotFilter
+from hotspot.filters import HotspotFilter, HotspotSourceFilter
 from hotspot.models import Hotspot, HotspotSource
 from hotspot.serializers import HotspotSerializerStrategy, HotspotSourceSerializerStrategy
 
@@ -35,6 +35,7 @@ class HotspotSourceViewSet(BasicModelViewSet):
     ordering = None
 
     lookup_field = 'uuid'
+
 
 class HotspotViewSet(BasicModelViewSet):
     """

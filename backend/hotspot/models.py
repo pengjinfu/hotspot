@@ -8,7 +8,7 @@ from django_extensions.db.models import BasicModel
 class HotspotSource(BasicModel):
     name = models.CharField(max_length=32, help_text='来源名称')
     desc = models.CharField(max_length=128, help_text='描述', blank=True)
-    icon = models.URLField(max_length=256, help_text='图标')
+    icon = models.URLField(max_length=256, help_text='图标', blank=True)
     code = models.PositiveSmallIntegerField(unique=True, help_text='来源编码')
     source_uri = models.URLField(null=True, help_text='来源地址')
 

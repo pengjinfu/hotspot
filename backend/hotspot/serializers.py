@@ -27,8 +27,6 @@ class HotspotSourceSerializerStrategy:
             fields = ALL_FIELDS
 
     class List(LqFlexFieldsModelSerializer):
-        last_fetch_data_time = serializers.DateTimeField()
-
         hotspot_set = HotspotSerializerStrategy.List(many=True, fields='id,title,uri,extra')
 
         class Meta:
@@ -36,6 +34,8 @@ class HotspotSourceSerializerStrategy:
             fields = ALL_FIELDS
 
     class Retrieve(LqFlexFieldsModelSerializer):
+        hotspot_set = HotspotSerializerStrategy.List(many=True, fields='id,title,uri,extra')
+
         class Meta:
             model = HotspotSource
             fields = ALL_FIELDS
