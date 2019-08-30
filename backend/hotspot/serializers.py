@@ -15,6 +15,16 @@ class HotspotSerializerStrategy:
 
         extra = serializers.CharField(source='desc')
 
+        class HotspotSourceSerializer(LqFlexFieldsModelSerializer):
+
+            class Meta:
+                model = HotspotSource
+                fields = ALL_FIELDS
+
+        expandable_fields = {
+            'hotspot_source_ex': (HotspotSourceSerializer, {'fields': 'id,name,icon', 'source': 'hotspot_source'})
+        }
+
         class Meta:
             model = Hotspot
             fields = ALL_FIELDS

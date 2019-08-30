@@ -59,7 +59,7 @@ class HotspotViewSet(BasicModelViewSet):
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend,
                        filters.OrderingFilter, filters.SearchFilter)
     filterset_class = HotspotFilter
-    search_fields = None
+    search_fields = ('title', 'hotspot_source__name')
     ordering = None
 
     lookup_field = 'uuid'
