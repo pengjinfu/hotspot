@@ -2,12 +2,14 @@ import json
 from abc import ABCMeta, abstractmethod
 
 from django.db.transaction import atomic
+from django.utils import timezone
+from django.utils.datetime_safe import datetime
 from django.utils.timezone import now
 from requests_html import HTMLSession
 from http import cookiejar
 
 from hotspot.constants import *
-from hotspot.models import HotspotSource
+from hotspot.models import HotspotSource, Hotspot
 from hotspot.serializers import HotspotSerializerStrategy
 
 
@@ -49,6 +51,10 @@ class Director:
             source.save()
 
             data = self.builder.get_data()
+
+            # to remove duplication data
+            for item in data:
+                Hotspot.objects.filter(title=item['title'], created_time__gt=timezone.now().date()).delete()
 
             serializer = HotspotSerializerStrategy.Create(data=data[::-1], many=True)
             serializer.is_valid(raise_exception=True)

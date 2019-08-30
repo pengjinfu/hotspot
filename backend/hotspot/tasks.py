@@ -36,3 +36,23 @@ def task_zhihu_daily():
 @shared_task
 def task_zhe_paper():
     Director(ThePaperBuilder()).build()
+
+
+@shared_task
+def task_wy_new():
+    Director(WYNewBuilder()).build()
+
+
+@shared_task
+def task_wei_xin():
+    Director(WeiXinBuilder()).build()
+
+
+@shared_task
+def task_chiphell():
+    Director(ChiphellBuilder()).build()
+
+
+@shared_task
+def task_it_home():
+    Director(ItHomeBuilder()).build()
