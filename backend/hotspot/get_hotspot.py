@@ -1,9 +1,9 @@
 import json
 from abc import ABCMeta, abstractmethod
 
+from celery import shared_task
 from django.db.transaction import atomic
 from django.utils import timezone
-from django.utils.datetime_safe import datetime
 from django.utils.timezone import now
 from requests_html import HTMLSession
 from http import cookiejar
@@ -11,13 +11,14 @@ from http import cookiejar
 from hotspot.constants import *
 from hotspot.models import HotspotSource, Hotspot
 from hotspot.serializers import HotspotSerializerStrategy
+from utils import hump_2_underline
 
 
 class Builder:
     __metaclass__ = ABCMeta
 
     def __init__(self):
-        # To tmp Save Fetched data
+        # To tmp Save Fetched Data
         self.tmp = []
 
     code = None
@@ -37,28 +38,36 @@ class Builder:
         self.tmp.append(data)
         return data
 
+    @classmethod
+    def register(cls):
+
+        @shared_task(name=f'hotspot.task.task_{hump_2_underline(cls.__name__.replace("Builder", ""))}')
+        def task():
+            Director(cls).build()
+
 
 class Director:
     def __init__(self, builder):
-        self.builder = builder
+        self.builder = builder()
 
     def build(self):
         with atomic():
-            # update last fetch data time
             source = HotspotSource.objects.get(code=self.builder.code)
-            copied_last_fetch_data_time = source.last_fetch_data_time
-            source.last_fetch_data_time = now()
+            last_fetch_data_time = now()
+            source.last_fetch_data_time = last_fetch_data_time
             source.save()
 
             data = self.builder.get_data()
 
-            # to remove duplication data
-            for item in data:
-                Hotspot.objects.filter(title=item['title'], created_time__gt=timezone.now().date()).delete()
-
             serializer = HotspotSerializerStrategy.Create(data=data[::-1], many=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+
+        # Remove duplication data,
+        # This operation not with atomic, otherwise will course error as follows.
+        # MySQLdb._exceptions.OperationalError: (1213, 'Deadlock found when trying to get lock; try restarting transaction')
+        for item in data:
+            Hotspot.objects.filter(title=item['title'], created_time__gt=timezone.now().date(), created_time__lte=last_fetch_data_time).delete()
 
 
 def preprocessor_fetch_data(uri, **kwargs):
@@ -352,4 +361,4 @@ class ItHomeBuilder(Builder):
 
 
 def test():
-    Director(ItHomeBuilder()).build()
+    Director(ZhihuBuilder).build()
