@@ -160,3 +160,5 @@ STATIC_URL = '/static/'
 # TEMPLATE_DIRS = (
 #     os.path.join(os.path.dirname(__file__), './templates'),
 # )
+
+HOTSPOT_PERIODIC_TASK_PREFIX = 'hotspot.task'

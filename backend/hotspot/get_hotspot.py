@@ -1,13 +1,15 @@
+import datetime
 import json
 from abc import ABCMeta, abstractmethod
 
 from celery import shared_task
 from django.db.transaction import atomic
 from django.utils import timezone
-from django.utils.timezone import now
+from django.utils.timezone import now, utc
 from requests_html import HTMLSession
 from http import cookiejar
 
+from backend.settings.base import HOTSPOT_PERIODIC_TASK_PREFIX
 from hotspot.constants import *
 from hotspot.models import HotspotSource, Hotspot
 from hotspot.serializers import HotspotSerializerStrategy
@@ -40,8 +42,7 @@ class Builder:
 
     @classmethod
     def register(cls):
-
-        @shared_task(name=f'hotspot.task.task_{hump_2_underline(cls.__name__.replace("Builder", ""))}')
+        @shared_task(name=f'{HOTSPOT_PERIODIC_TASK_PREFIX}_{hump_2_underline(cls.__name__.replace("Builder", ""))}')
         def task():
             Director(cls).build()
 
@@ -53,7 +54,7 @@ class Director:
     def build(self):
         with atomic():
             source = HotspotSource.objects.get(code=self.builder.code)
-            last_fetch_data_time = now()
+            last_fetch_data_time = datetime.datetime.utcnow().replace(tzinfo=utc)
             source.last_fetch_data_time = last_fetch_data_time
             source.save()
 
@@ -67,7 +68,8 @@ class Director:
         # This operation not with atomic, otherwise will course error as follows.
         # MySQLdb._exceptions.OperationalError: (1213, 'Deadlock found when trying to get lock; try restarting transaction')
         for item in data:
-            Hotspot.objects.filter(title=item['title'], created_time__gt=timezone.now().date(), created_time__lte=last_fetch_data_time).delete()
+            # TODO: THis will course timezone warning, not find appropriate method to deal with it.
+            Hotspot.objects.filter(title=item['title'], created_time__gt=datetime.datetime.utcnow().replace(tzinfo=utc).date(), created_time__lte=last_fetch_data_time).delete()
 
 
 def preprocessor_fetch_data(uri, **kwargs):

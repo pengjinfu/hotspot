@@ -1,3 +1,4 @@
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from django_extensions.drf.serializers.serializers import LqFlexFieldsModelSerializer, BasicModelSerializer
 from rest_framework import serializers
 from rest_framework.serializers import ALL_FIELDS
@@ -12,11 +13,9 @@ class HotspotSerializerStrategy:
             fields = ALL_FIELDS
 
     class List(LqFlexFieldsModelSerializer):
-
         extra = serializers.CharField(source='desc')
 
         class HotspotSourceSerializer(LqFlexFieldsModelSerializer):
-
             class Meta:
                 model = HotspotSource
                 fields = ALL_FIELDS
@@ -48,4 +47,66 @@ class HotspotSourceSerializerStrategy:
 
         class Meta:
             model = HotspotSource
+            fields = ALL_FIELDS
+
+
+class IntervalScheduleSerializerStrategy:
+
+    class Create(BasicModelSerializer):
+
+        class Meta:
+            model = IntervalSchedule
+            fields = ALL_FIELDS
+
+    class List(LqFlexFieldsModelSerializer):
+
+        class Meta:
+            model = IntervalSchedule
+            fields = ALL_FIELDS
+
+    class Update(BasicModelSerializer):
+
+        class Meta:
+            model = IntervalSchedule
+            fields = ALL_FIELDS
+
+    class Retrieve(LqFlexFieldsModelSerializer):
+
+        class Meta:
+            model = IntervalSchedule
+            fields = ALL_FIELDS
+
+    class FlexField(LqFlexFieldsModelSerializer):
+        class Meta:
+            model = IntervalSchedule
+            fields = ALL_FIELDS
+
+
+class PeriodicTaskSerializerStrategy:
+    class Create(BasicModelSerializer):
+
+        class Meta:
+            model = PeriodicTask
+            fields = ALL_FIELDS
+
+    class List(LqFlexFieldsModelSerializer):
+
+        expandable_fields = {
+            'interval': (IntervalScheduleSerializerStrategy.Retrieve, {'fields': 'every,period,id'})
+        }
+
+        class Meta:
+            model = PeriodicTask
+            fields = ALL_FIELDS
+
+    class Update(BasicModelSerializer):
+
+        class Meta:
+            model = PeriodicTask
+            fields = ('interval', 'enabled')
+
+    class Retrieve(LqFlexFieldsModelSerializer):
+
+        class Meta:
+            model = PeriodicTask
             fields = ALL_FIELDS
