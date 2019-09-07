@@ -4,8 +4,7 @@ from abc import ABCMeta, abstractmethod
 
 from celery import shared_task
 from django.db.transaction import atomic
-from django.utils import timezone
-from django.utils.timezone import now, utc
+from django.utils.timezone import utc
 from requests_html import HTMLSession
 from http import cookiejar
 
@@ -22,8 +21,10 @@ class Builder:
     def __init__(self):
         # To tmp Save Fetched Data
         self.tmp = []
+        self.source = HotspotSource.objects.get(code=self.code)
 
     code = None
+    uri = None
 
     @abstractmethod
     def get_data(self):
@@ -362,5 +363,90 @@ class ItHomeBuilder(Builder):
         return self.tmp
 
 
+class LssdjtBuilder(Builder):
+    uri = 'http://www.lssdjt.com/'
+    code = LSSDJT_CODE
+
+    def get_data(self):
+        source = HotspotSource.objects.get(code=self.code)
+        r = preprocessor_fetch_data(self.uri)
+        for item in r.find('.gong'):
+            a = item.find('a', first=True)
+            self.generate_single_data(
+                item.text,
+                f"http://www.lssdjt.com{a.attrs['href']}",
+                hotspot_source=source.id,
+                count=''
+            )
+        return self.tmp
+
+
+class QDailyBuilder(Builder):
+    code = QDAILY_CODE
+    uri = 'https://www.qdaily.com/tags/29.html'
+
+    def get_data(self):
+        source = HotspotSource.objects.get(code=self.code)
+        r = preprocessor_fetch_data(self.uri)
+        for item in r.find('.packery-item'):
+            self.generate_single_data(
+                item.find('h3', first=True).text,
+                f"https://www.qdaily.com{item.find('a', first=True).attrs['href']}",
+                hotspot_source=source.id,
+                count=''
+            )
+        return self.tmp
+
+
+class V2EXBuilder(Builder):
+    code = V2EX_CODE
+    uri = 'https://www.v2ex.com/?tab=hot'
+
+    def get_data(self):
+        source = HotspotSource.objects.get(code=self.code)
+        r = preprocessor_fetch_data(self.uri)
+        for item in r.find('.cell.item'):
+            self.generate_single_data(
+                item.find('.item_title', first=True).text,
+                f"https://www.v2ex.com/{item.find('.item_title', first=True).find('a', first=True).attrs['href']}",
+                hotspot_source=source.id,
+                count=item.find('.count_livid', first=True).text
+            )
+        return self.tmp
+
+
+class TianyaBuilder(Builder):
+    code = TIANYA_CODE
+    uri = 'http://bbs.tianya.cn/list.jsp?item=funinfo&grade=3&order=1'
+
+    def get_data(self):
+        r = preprocessor_fetch_data(self.uri)
+        for item in r.find('table tr')[1:]:
+            a = item.find('a', first=True)
+            self.generate_single_data(
+                a.text,
+                f"http://bbs.tianya.cn{a.attrs['href']}",
+                self.source.id,
+                count=item.find('td')[2].text
+            )
+        return self.tmp
+
+
+class GithubBuilder(Builder):
+    code = GITHUB_CODE
+    uri = 'https://github.com/trending'
+
+    def get_data(self):
+        r = preprocessor_fetch_data(self.uri)
+        for item in r.find('.Box article')[1:]:
+            self.generate_single_data(
+                item.find('.lh-condensed a', first=True).text,
+                f"https://github.com{item.find('.lh-condensed a', first=True).attrs['href']}",
+                hotspot_source=self.source.id,
+                count=item.find('.muted-link.d-inline-block.mr-3', first=True).text
+            )
+        return self.tmp
+
+
 def test():
-    Director(ZhihuBuilder).build()
+    Director(GithubBuilder).build()

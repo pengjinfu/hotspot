@@ -1,10 +1,14 @@
+import json
+
 import django_filters
+from django.core.cache import cache
 from django.db.models import Q
 from django_celery_beat.models import PeriodicTask
 from django_extensions.drf.viewsets import BasicModelViewSet
 from rest_framework import filters
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.response import Response
 
 from hotspot.filters import HotspotFilter, HotspotSourceFilter
 from hotspot.models import Hotspot, HotspotSource
@@ -37,6 +41,17 @@ class HotspotSourceViewSet(BasicModelViewSet):
     ordering = None
 
     lookup_field = 'uuid'
+
+    def list(self, request, *args, **kwargs):
+        ret = cache.get('hotspot_source')
+        if ret is None:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            x = json.dumps(serializer.data)
+            cache.set('hotspot_source', x, timeout=30 * 60)
+            return super().list(request, *args, **kwargs)
+        else:
+            return Response(json.loads(ret))
 
 
 class HotspotViewSet(BasicModelViewSet):
